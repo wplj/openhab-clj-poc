@@ -1,0 +1,7 @@
+* text=auto
+*.clj text eol=lf
+*.edn text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf

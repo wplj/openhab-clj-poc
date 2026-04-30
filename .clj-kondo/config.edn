@@ -1,0 +1,5 @@
+;; openhab.* is a framework/library API. Public vars are intentionally exported for addons,
+;; tests, and REPL/system wiring, so "unused public var" is noise here.
+;; core.async/io-thread is present in current core.async, but clj-kondo does not resolve it yet.
+{:linters {:unused-public-var {:level :off}
+           :unresolved-var {:exclude [clojure.core.async/io-thread]}}}
