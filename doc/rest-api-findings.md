@@ -1,29 +1,22 @@
-# OpenHAB REST API — Architectural Findings
+# HTTP API Research
 
-Source: <https://www.openhab.org/docs/configuration/restdocs.html>
-
----
-
-## The fundamental split: Things vs Items
-
-This is the most important design insight from the REST API.
-
-**Things** — the hardware/binding side. Physical device or cloud service.
-Managed by bindings. Has status lifecycle. Exposes Channels.
-
-**Items** — the user-facing, automation side. Hold state. Accept commands.
-Belong to groups. Carry tags and metadata. Used by rules, UIs, automations.
-Have no inherent connection to hardware — they are an abstraction.
-
-**Links (ItemChannelLinks)** — the glue. A Link connects one Item to one
-Channel. This decoupling means the same Item can be linked to channels from
-different Things, and the same Channel can feed multiple Items.
-
-**The UI never talks to Things directly. It talks to Items.**
+Reference baseline: <https://www.openhab.org/docs/configuration/restdocs.html>
 
 ---
 
-## Command / state flow
+## Domain model: Things vs Items
+
+**Things** — the hardware/binding side. A physical device or cloud service managed by a binding. Has a status lifecycle. Exposes Channels.
+
+**Items** — the automation and UI side. Hold state. Accept commands. Belong to groups. Carry tags and metadata. Used by rules, UIs, and automations. Items have no inherent connection to hardware — they are an abstraction layer over device state.
+
+**Links (ItemChannelLinks)** — the binding between an Item and a Channel. A single Item maps to at most one Channel; a single Channel can feed multiple Items.
+
+**The UI and rules layer never address Things directly. They address Items.**
+
+---
+
+## Command and state flow
 
 ```text
 Client → POST /rest/items/{name}     (send command as plain text)
@@ -35,26 +28,7 @@ Device → Thing/Binding → Channel → Link → Item state updated
 
 ---
 
-## Missing abstractions in our framework (pre-findings)
-
-| Concept    | Status | Where               |
-| ---        | ---    | ---                 |
-| Thing      | done   | openhab.thing       |
-| Channel    | done   | openhab.thing       |
-| Bridge     | done   | openhab.bridge      |
-| Status     | done   | openhab.thing       |
-| Registry   | done   | openhab.registry    |
-| Polling    | done   | openhab.polling     |
-| Commands   | done   | openhab.commands    |
-| Item       | done   | openhab.item        |
-| Link       | done   | openhab.link        |
-| Events     | done   | openhab.events      |
-| Reporting  | done   | openhab.reporting   |
-| Projection | done   | openhab.projection  |
-
----
-
-## Item model (from REST API)
+## Item
 
 ```text
 item-name       string    unique stable identifier (e.g. "LivingRoom_Temp")
@@ -77,7 +51,7 @@ Groups are Items with members and an optional aggregation function.
 
 ---
 
-## Link model
+## Link
 
 ```text
 item-name    string    the Item being linked
@@ -118,7 +92,7 @@ openhab/channels/{uid}/triggered        ChannelTriggeredEvent
 }
 ```
 
-payload is double-serialized JSON (string within JSON).
+`payload` is double-serialized JSON (a JSON string containing JSON).
 
 ### State types (the `type` field in payloads)
 
@@ -127,18 +101,19 @@ StringType, UnDef, Null, DateTimeType, RawType, StringList.
 
 ### SSE endpoints
 
-GET /rest/events?topics=...           full event bus, topic-filtered
-GET /rest/events/states               item-state-only stream → returns connectionId
-POST /rest/events/states/{connectionId}  update tracked item set for this connection
+```text
+GET  /rest/events?topics=...              full event bus, topic-filtered
+GET  /rest/events/states                  item-state-only stream → returns connectionId
+POST /rest/events/states/{connectionId}   update tracked item set for this connection
+```
 
 ### WebSocket
 
-ws://{host}/ws  — bidirectional; requires PING heartbeat every ~5s
-Same event type taxonomy as SSE.
+`ws://{host}/ws` — bidirectional; requires PING heartbeat every ~5 s. Uses the same event type taxonomy as SSE.
 
 ---
 
-## REST API resource summary
+## OpenHAB REST API resource summary
 
 | Resource      | Base path            | Notes                              |
 | ---           | ---                  | ---                                |
@@ -155,31 +130,28 @@ Same event type taxonomy as SSE.
 
 ---
 
-## Key design implication for our framework
+## Proposed HTTP API direction
 
-The presentation layer (REST API + SSE/WebSocket) should be thin:
+The HTTP layer is a thin read/write edge over the registry and event bus:
 
-- GET /things, /items, /links → read from registry atom
-- POST /items/{name} → call openhab.commands/dispatch!
-- GET /events → subscribe to openhab.events publication
+- `GET /things`, `/items`, `/links` — read from the registry atom
+- `POST /items/{name}` — call `openhab.commands/dispatch!`
+- `GET /events` — subscribe to the `openhab.events` publication
 
-The framework's job is to keep the registry correct.
-The presentation layer's job is to expose it.
+The framework keeps the registry correct; the HTTP layer should expose it without owning domain behavior.
 
 ---
 
-## Clojure HTTP/Web options
+## Clojure HTTP stack
 
-The external API should stay a thin edge over registry reads, `commands/dispatch!`, and event subscriptions. That points toward small composable libraries rather than a heavy full-stack framework.
-
-| Option | Fit | Notes |
+| Option | Role | Notes |
 | --- | --- | --- |
-| Ring | foundation | Standard Clojure HTTP abstraction. Good as the portable base layer regardless of routing/server choice. |
-| Reitit | strong default | Data-driven routing, coercion, OpenAPI support, Ring integration. Fits this project's data-first style and keeps REST endpoints thin. |
-| http-kit | Ring adapter for SSE/WS | Provides `as-channel` for SSE event streaming and WebSocket; pairs with Reitit for routing. The natural server choice when Ring + Reitit is the routing layer. |
-| Pedestal | powerful but heavier | Interceptor model is excellent for cross-cutting concerns, but adds more framework weight than the thin API edge requires. |
-| Aleph | async/networking-heavy | Strong async stack for high concurrency, but introduces Manifold/Aleph concepts that are not necessary until the API edge proves it needs them. |
-| Lacinia | GraphQL layer | Good match if we choose GraphQL deliberately: registry graph reads map well to queries, commands map to mutations, and the event bus maps to subscriptions. Do not make core depend on it. |
-| Kit/Biff | application frameworks | Useful for building a product shell, auth, pages, persistence, etc. Too opinionated for the core API edge. |
+| Ring | HTTP abstraction | Standard portable base layer; works with any adapter. |
+| Reitit | Routing | Data-driven routing, coercion, OpenAPI support. Fits the data-first style of this codebase. |
+| http-kit | Ring adapter / SSE / WS | Provides `as-channel` for SSE event streaming and WebSocket. The natural adapter alongside Ring + Reitit. |
+| Pedestal | Alternative framework | Interceptor model handles cross-cutting concerns well, but adds more framework weight than the thin edge needs. |
+| Aleph | Async networking | Strong for high-concurrency workloads, but pulls in Manifold semantics that the current design does not require. |
+| Lacinia | GraphQL | Registry graph reads map to queries, commands to mutations, event bus to subscriptions. Keep as a parallel option; do not couple the core model to it. |
+| Kit/Biff | Application frameworks | Appropriate for a product shell (auth, pages, persistence). Too opinionated for the core API edge. |
 
-Recommendation: Ring + Reitit + http-kit. Reitit handles routing; http-kit is the Ring adapter and provides the `as-channel` API for SSE streaming and WebSocket. Together they are idiomatic, data-driven, and thin. Keep GraphQL/Lacinia as a parallel API option once the read model and subscription semantics are stable; do not couple the core registry/transition model to either REST or GraphQL.
+**Recommendation:** Ring + Reitit + http-kit. Reitit handles routing; http-kit is the Ring adapter and provides `as-channel` for SSE streaming and WebSocket. Keep GraphQL/Lacinia as a parallel option once the read model and subscription semantics are stable.

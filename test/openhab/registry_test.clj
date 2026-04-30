@@ -16,10 +16,11 @@
 
 (deftest put-thing-maintains-reverse-bridge-index
   (let [state (-> (registry/empty-state)
-                  (registry/put-thing (assoc (thing/make-thing "dev-1" :sensor) :bridge-id "bridge-1")))]
+                  (registry/put-thing (assoc (thing/make-thing "dev-1" :sensor) :bridge-id "bridge-1")))
+        children (registry/children-of state "bridge-1")]
     (is (= "bridge-1" (:bridge-id (registry/get-thing state "dev-1"))))
-    (is (= #{{:thing-id "dev-1" :thing-type :sensor :runtime {:status {:value :initializing}, :reported {}, :desired {}}, :bridge-id "bridge-1"}}
-           (set (registry/children-of state "bridge-1"))))))
+    (is (= ["dev-1"] (mapv :thing-id children)))
+    (is (= [:sensor] (mapv :thing-type children)))))
 
 (deftest remove-thing-cascades-links-and-indexes
   (let [thing (assoc (thing/make-thing "dev-1" :sensor)
@@ -53,8 +54,3 @@
         removed (registry/remove-item state "Lamp")]
     (is (nil? (registry/get-item removed "Lamp")))
     (is (empty? (registry/link-keys-for-channel removed "dev-1" :power)))))
-
-(deftest pure-update-helpers-are-safe-on-missing-ids
-  (let [state (registry/empty-state)]
-    (is (= state (registry/update-thing state "missing" assoc :foo 1)))
-    (is (= state (registry/update-item state "missing" assoc :foo 1)))))

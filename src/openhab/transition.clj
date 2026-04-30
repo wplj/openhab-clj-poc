@@ -271,8 +271,7 @@
   (let [item-name (:item-name itm)
         existing  (registry/get-item state item-name)
         stored    (if existing
-                    (cond-> itm
-                      true                              (assoc :item-type   (:item-type   existing))
+                    (cond-> (assoc itm :item-type (:item-type existing))
                       (contains? existing :state)       (assoc :state       (:state       existing))
                       (contains? existing :state-type)  (assoc :state-type  (:state-type  existing))
                       (contains? existing :last-change) (assoc :last-change (:last-change existing)))

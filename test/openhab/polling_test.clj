@@ -75,25 +75,30 @@
     (is (>= @error-calls 2))))
 
 (deftest stop-returns-without-waiting-for-hung-fetch
-  (let [started?      (promise)
+  (let [started?       (promise)
+        release-fetch  (promise)
+        stopped?       (promise)
         success-called (atom false)
         error-called   (atom false)
         handle         (polling/start! {:fetch-fn    (fn []
                                                        (deliver started? true)
-                                                       (Thread/sleep 300)
+                                                       @release-fetch
                                                        :done)
                                         :on-success  (fn [_] (reset! success-called true))
                                         :on-error    (fn [_] (reset! error-called true))
                                         :interval-ms 60000})]
     @started?
-    (let [started-at (System/nanoTime)]
+    (future
       (polling/stop! handle)
-      (let [elapsed-ms (/ (- (System/nanoTime) started-at) 1000000.0)]
-        (is (< elapsed-ms 150.0)
-            (str "stop! should return promptly; elapsed " elapsed-ms "ms"))))
-    (Thread/sleep 350)
+      (deliver stopped? true))
+    (is (= true (deref stopped? 5000 false))
+        "stop! should return while the in-flight fetch is still blocked")
     (is (false? @success-called) "late success callbacks must be suppressed after stop")
-    (is (false? @error-called) "late error callbacks must be suppressed after stop")))
+    (is (false? @error-called) "late error callbacks must be suppressed after stop")
+    (deliver release-fetch true)
+    (Thread/sleep 100)
+    (is (false? @success-called) "fetch completion after stop must not call on-success")
+    (is (false? @error-called) "fetch completion after stop must not call on-error")))
 
 (deftest stop-twice-does-not-throw
   (let [handle (polling/start! {:fetch-fn    (fn [] nil)

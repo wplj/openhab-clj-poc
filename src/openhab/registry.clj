@@ -162,23 +162,6 @@
   [state item-name thing-id channel-id]
   (remove-link-key* state [item-name thing-id channel-id]))
 
-(defn update-thing
-  "Applies f to a Thing in the registry state. No-op for unknown thing-id.
-   WARNING: bypasses all invariants (immutable fields, bridge indexes). Prefer
-   put-thing or the transition functions for structural changes."
-  [state thing-id f & args]
-  (if (contains? (:things state) thing-id)
-    (update-in state [:things thing-id] #(apply f % args))
-    state))
-
-(defn update-item
-  "Applies f to an Item in the registry state. No-op for unknown item-name.
-   WARNING: bypasses all invariants (immutable fields). Prefer put-item or
-   the transition functions for structural changes."
-  [state item-name f & args]
-  (if (contains? (:items state) item-name)
-    (update-in state [:items item-name] #(apply f % args))
-    state))
 
 (s/def ::things (s/map-of ::thing/thing-id ::thing/thing))
 (s/def ::items (s/map-of ::item/item-name ::item/item))

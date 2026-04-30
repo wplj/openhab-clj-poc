@@ -8,3 +8,5 @@ out/
 *.jar
 .trunk/
 .nrepl-port
+trivy.yaml
+*-refactor.md
