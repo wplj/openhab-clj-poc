@@ -366,6 +366,21 @@
     (is (= {:ok false :reason :thing-offline} (:result result)))
     (is (empty? (:effects result)))))
 
+(deftest item-command-accepted-rejects-read-only-channel-before-encoding
+  (let [state    (-> (registry/empty-state)
+                     (registry/put-thing (-> (thing/make-thing "dev-1" :fan)
+                                             (assoc :channels {:temp {:access :ro :channel-type :number}})
+                                             (assoc-in [:runtime :status] (thing/status :online))))
+                     (registry/put-item (item/make-item "Temp" "Number"))
+                     (registry/put-link (link/make-link "Temp" "dev-1" :temp)))
+        profiles (profile/register-codec (profiles)
+                                         [:fan :temp]
+                                         {:from-state (fn [_]
+                                                        (throw (ex-info "encoder should not run" {})))})
+        result   (transition/item-command-accepted state profiles "cmd-1" "Temp" 99 java.time.Instant/EPOCH)]
+    (is (= {:ok false :reason :channel-read-only} (:result result)))
+    (is (empty? (:effects result)))))
+
 (deftest command-failed-emits-command-failed-event
   (let [accepted (transition/command-accepted (base-state) (profiles) "cmd-1"
                                               [{:thing-id "dev-1" :channel-id :fan-speed :value 5}]

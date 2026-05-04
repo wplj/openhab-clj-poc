@@ -388,6 +388,9 @@
             (not (thing/online? thing))
             {:ok false :reason :thing-offline}
 
+            (not= :rw (get-in thing [:channels (:channel-id lnk) :access]))
+            {:ok false :reason :channel-read-only}
+
             :else
             (try
               {:ok true

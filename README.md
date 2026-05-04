@@ -14,6 +14,7 @@ Implemented:
 - Separate `:reported` and `:desired` channel state, with projection from effective state into items.
 - Profile and codec registries for typed inbound projection and outbound command encoding.
 - Bridge topology rules, status propagation, polling/reporting lifecycle helpers, and command failure correction.
+- Example addon slice with an in-memory device API, profile codecs, startup reporting, command dispatch, and integration tests.
 
 Not implemented yet:
 
