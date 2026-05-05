@@ -28,6 +28,19 @@
       (finally
         (system/stop! ctx)))))
 
+(deftest async-start-registers-structure-before-first-report
+  (reset-api!)
+  (let [ctx (system/start! {:interval-ms 60000
+                            :initial-fetch? false})]
+    (try
+      (is (= :initializing (thing-status ctx "ap-1")))
+      (is (nil? (item-state ctx "AP_FanSpeed")))
+      (reporting/report-channels! ctx "ap-1" (api/fetch! "ap-1"))
+      (is (= :online (thing-status ctx "ap-1")))
+      (is (= 3 (item-state ctx "AP_FanSpeed")))
+      (finally
+        (system/stop! ctx)))))
+
 (deftest item-command-updates-device-and-converges-on-next-report
   (reset-api!)
   (let [ctx (system/start! {:interval-ms 60000})]
