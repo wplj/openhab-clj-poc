@@ -152,6 +152,12 @@ The profile determines how channel values become item states (inbound) and how i
 
 `runtime/apply-transition!` is the single public mutation entry point. All transitions — structural (add/remove thing, item, link) and runtime-state (reported, desired, status, projection) — flow through `transition.clj`, which reuses the pure helpers from `registry.clj`.
 
+### Query read model
+
+`query.clj` is the stable read boundary over the registry. It returns API-facing snapshots for Things, Items, Links, and the whole system without exposing raw index maps or private runtime details such as desired ages and command ids. The query layer keeps typed EDN values because it is still inside the Clojure core; JSON strings, camelCase keys, pagination, filtering syntax, and HTTP status codes belong to the later wire/API layer.
+
+This boundary is intentionally pure and small. It accepts either the registry atom or a plain registry state value, derives channel effective values from `:reported` plus `:desired`, includes bridge children from the maintained reverse index, and returns sorted vectors for collection fields so callers get stable shapes. Keeping this layer separate lets REST, SSE, GraphQL, or REPL tooling share the same public read model without coupling the core registry to any one transport.
+
 ---
 
 ## Namespace structure
@@ -163,6 +169,7 @@ src/
     item.clj         ← specs: Item, GroupItem; projection cache shape
     link.clj         ← specs: Link; profile reference
     registry.clj     ← state atom; read helpers; pure state→state helpers; raw storage
+    query.clj        ← pure read model for API/UI edges; stable snapshots without raw indexes
     profile.clj      ← named profile registry; validated profile/codec contract; system:default; codec API
     projection.clj   ← pure: affected items, effective-state lookup, single-link item projection
     transition.clj   ← pure: state transitions returning {:state … :events […] :effects […] :result …}
@@ -419,6 +426,7 @@ openhab.thing                 │
 openhab.item                  │
 openhab.link                  │
 openhab.registry (reads)      │ openhab.runtime   (apply-transition!)
+openhab.query                 │
 openhab.projection            │ openhab.events    (publish!)
 openhab.transition            │ openhab.effects   (dispatch!, handlers)
 openhab.profile               │ openhab.reporting (channel reporting lifecycle)

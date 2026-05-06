@@ -15,13 +15,14 @@ Implemented:
 - Profile and codec registries for typed inbound projection and outbound command encoding.
 - Bridge topology rules, status propagation, polling/reporting lifecycle helpers, and command failure correction.
 - Example addon slice with an in-memory device API, profile codecs, synchronous/asynchronous startup reporting, command dispatch, event publication, and integration tests.
+- Pure query/read-model views for future API and UI edges, without exposing raw registry indexes or runtime internals.
 
 Not implemented yet:
 
 - Persistence.
 - HTTP/API layer.
 - Authentication/authorization.
-- UI-facing serialization contracts.
+- UI-facing wire serialization contracts.
 - Group item aggregation.
 - Production addon packaging.
 
