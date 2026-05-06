@@ -2,8 +2,11 @@
   (:require [cheshire.core :as json]
             [clojure.test :refer [deftest is testing]]
             [openhab.api.http :as http]
+            [openhab.effects :as effects]
+            [openhab.events :as events]
             [openhab.item :as item]
             [openhab.link :as link]
+            [openhab.profile :as profile]
             [openhab.registry :as registry]
             [openhab.thing :as thing]))
 
@@ -33,15 +36,40 @@
         (registry/put-link (link/make-link "AP_FanSpeed" "ap-1" :fan-speed))
         (registry/put-link (link/make-link "AP_Temp" "ap-1" :temp)))))
 
-(defn- request [handler method uri]
-  (handler {:request-method method
-            :uri uri}))
+(defn- sample-profiles []
+  (-> (profile/make-registry)
+      (profile/register-codec [:air-purifier :fan-speed]
+                              {:to-state (fn [v] {:state v :state-type :number})
+                               :from-state identity})
+      (profile/register-codec [:air-purifier :temp]
+                              {:to-state (fn [v] {:state v :state-type :number})
+                               :from-state identity})))
+
+(defn- request
+  ([handler method uri]
+   (request handler method uri nil))
+  ([handler method uri body]
+   (handler (cond-> {:request-method method
+                     :uri uri}
+              (some? body) (assoc :body (java.io.ByteArrayInputStream.
+                                         (.getBytes body java.nio.charset.StandardCharsets/UTF_8)))))))
 
 (defn- body [response]
   (json/parse-string (:body response) true))
 
 (defn- registry-ctx [state]
   {:registry (atom state)})
+
+(defn- command-ctx [state send-fn]
+  (let [reg (atom state)
+        bus (events/make-bus)
+        ctx {:registry reg
+             :bus bus
+             :profiles (sample-profiles)}
+        dispatch-effect (effects/make-dispatcher
+                         {:openhab/send-command (effects/send-command-handler send-fn)}
+                         ctx)]
+    (assoc ctx :effect-dispatcher dispatch-effect)))
 
 (deftest get-system-returns-json-snapshot
   (let [handler (http/handler (registry-ctx (sample-state)))
@@ -101,6 +129,51 @@
     (is (= 405 (:status response)))
     (is (= expected-json-content-type (get-in response [:headers "Content-Type"])))
     (is (= {:error "method not allowed"} (body response)))))
+
+(deftest post-item-command-accepts-command-and-dispatches-effect
+  (let [sent (atom [])
+        ctx (command-ctx (sample-state)
+                         (fn [_thing effect]
+                           (swap! sent conj effect)))
+        handler (http/handler ctx)
+        response (request handler :post "/api/items/AP_FanSpeed/command" "{\"value\":5}")]
+    (is (= 202 (:status response)))
+    (is (= {:accepted true} (body response)))
+    (is (= [{:kind :openhab/send-command
+             :thing-id "ap-1"
+             :commands {:fan-speed 5}}]
+           (mapv #(select-keys % [:kind :thing-id :commands]) @sent)))
+    (is (= 5 (get-in @(:registry ctx) [:items "AP_FanSpeed" :state])))))
+
+(deftest post-item-command-rejects-invalid-bodies
+  (let [handler (http/handler (command-ctx (sample-state) (fn [_thing _effect])))]
+    (doseq [[request-body expected-error] [[nil "empty body"]
+                                           ["" "empty body"]
+                                           ["{" "malformed json"]
+                                           ["[]" "expected json object"]
+                                           ["{}" "missing or null value"]
+                                           ["{\"value\":null}" "missing or null value"]]]
+      (let [response (request handler :post "/api/items/AP_FanSpeed/command" request-body)]
+        (is (= 400 (:status response)))
+        (is (= {:error expected-error} (body response)))))))
+
+(deftest post-item-command-maps-domain-failures
+  (testing "missing item is a 404"
+    (let [handler (http/handler (command-ctx (sample-state) (fn [_thing _effect])))
+          response (request handler :post "/api/items/Missing/command" "{\"value\":5}")]
+      (is (= 404 (:status response)))
+      (is (= {:error "not found"} (body response)))))
+  (testing "read-only channel is a conflict with reason"
+    (let [handler (http/handler (command-ctx (sample-state) (fn [_thing _effect])))
+          response (request handler :post "/api/items/AP_Temp/command" "{\"value\":99}")]
+      (is (= 409 (:status response)))
+      (is (= {:error "channel-read-only"} (body response)))))
+  (testing "other domain failures fall through to conflict"
+    (let [state (update-in (sample-state) [:things "ap-1" :runtime :status] (constantly (thing/status :offline)))
+          handler (http/handler (command-ctx state (fn [_thing _effect])))
+          response (request handler :post "/api/items/AP_FanSpeed/command" "{\"value\":5}")]
+      (is (= 409 (:status response)))
+      (is (= {:error "thing-offline"} (body response))))))
 
 (deftest handler-reads-live-registry-on-each-request
   (let [reg (registry/make-registry)
