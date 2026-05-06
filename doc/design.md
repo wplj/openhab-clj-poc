@@ -158,6 +158,12 @@ The profile determines how channel values become item states (inbound) and how i
 
 This boundary is intentionally pure and small. It accepts either the registry atom or a plain registry state value, derives channel effective values from `:reported` plus `:desired`, includes bridge children from the maintained reverse index, and returns sorted vectors for collection fields so callers get stable shapes. Keeping this layer separate lets REST, SSE, GraphQL, or REPL tooling share the same public read model without coupling the core registry to any one transport.
 
+### API view boundary
+
+`openhab.api.view` is the pure serialization boundary over `query.clj`. It converts query read models into public API maps whose values are safe for JSON encoders: keywords become strings, `java.time.Instant` values become ISO-8601 strings, UUIDs become strings, sets become sorted vectors, and nested map keys become strings. Ratios, NaN, Infinity, and unsupported object values fail fast with `ex-info` rather than leaking non-portable JVM values to the API edge.
+
+This layer intentionally keeps Clojure keyword keys in the returned maps. That is still Clojure data, not an HTTP response body. The later transport layer decides whether external field names are kebab-case JSON strings, camelCase JSON strings, GraphQL field names, or something else. Keeping key naming out of the core API view prevents premature coupling to REST or GraphQL while still making value serialization explicit and testable.
+
 ---
 
 ## Namespace structure
@@ -168,6 +174,7 @@ src/
     thing.clj        ← specs: Thing, Channel, Bridge, Status; constructors
     item.clj         ← specs: Item, GroupItem; projection cache shape
     link.clj         ← specs: Link; profile reference
+    api/view.clj     ← pure API view serialization over query read models
     registry.clj     ← state atom; read helpers; pure state→state helpers; raw storage
     query.clj        ← pure read model for API/UI edges; stable snapshots without raw indexes
     profile.clj      ← named profile registry; validated profile/codec contract; system:default; codec API
@@ -346,7 +353,7 @@ dispatch! called with {:item-name "X" :value 5}
   → runtime/apply-transition! called with transition/item-command-accepted
       transition (all within one registry snapshot):
         resolves item → links via :item->links index
-        rejects missing/unlinked/offline/ambiguous items before any state is changed
+        rejects missing/unlinked/offline/ambiguous/read-only-channel conditions before any state is changed
         profile/encode-command → channel-value (typed scalar)
         writes {channel-id {:value v :age 0 :command-id id}} into :runtime :desired on thing
         computes effective state = (merge :reported (map-vals :value :desired))
@@ -427,6 +434,7 @@ openhab.item                  │
 openhab.link                  │
 openhab.registry (reads)      │ openhab.runtime   (apply-transition!)
 openhab.query                 │
+openhab.api.view              │
 openhab.projection            │ openhab.events    (publish!)
 openhab.transition            │ openhab.effects   (dispatch!, handlers)
 openhab.profile               │ openhab.reporting (channel reporting lifecycle)

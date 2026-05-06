@@ -16,13 +16,14 @@ Implemented:
 - Bridge topology rules, status propagation, polling/reporting lifecycle helpers, and command failure correction.
 - Example addon slice with an in-memory device API, profile codecs, synchronous/asynchronous startup reporting, command dispatch, event publication, and integration tests.
 - Pure query/read-model views for future API and UI edges, without exposing raw registry indexes or runtime internals.
+- Pure API view serialization over the query model, converting Clojure-native values to JSON-safe public values.
 
 Not implemented yet:
 
 - Persistence.
 - HTTP/API layer.
 - Authentication/authorization.
-- UI-facing wire serialization contracts.
+- HTTP route and streaming contracts.
 - Group item aggregation.
 - Production addon packaging.
 
