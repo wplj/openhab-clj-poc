@@ -134,9 +134,9 @@ POST /rest/events/states/{connectionId}   update tracked item set for this conne
 
 The HTTP layer is a thin read/write edge over the registry and event bus:
 
-- `GET /things`, `/items`, `/links` — read from the registry atom
-- `POST /items/{name}` — call `openhab.commands/dispatch!`
-- `GET /events` — subscribe to the `openhab.events` publication
+- `GET /api/system`, `/api/things`, `/api/things/{thing-id}`, `/api/items`, `/api/items/{item-name}` — read from the registry atom through `openhab.query` and `openhab.api.view`
+- `POST /api/items/{item-name}/command` — call `openhab.commands/dispatch!`
+- `GET /api/events` — subscribe to the `openhab.events` publication
 
 The framework keeps the registry correct; the HTTP layer should expose it without owning domain behavior.
 

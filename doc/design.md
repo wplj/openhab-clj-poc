@@ -164,6 +164,14 @@ This boundary is intentionally pure and small. It accepts either the registry at
 
 This layer intentionally keeps Clojure keyword keys in the returned maps. That is still Clojure data, not an HTTP response body. The later transport layer decides whether external field names are kebab-case JSON strings, camelCase JSON strings, GraphQL field names, or something else. Keeping key naming out of the core API view prevents premature coupling to REST or GraphQL while still making value serialization explicit and testable.
 
+### HTTP API boundary
+
+`openhab.api.http` is the thin Ring/Reitit edge over `query.clj` and `openhab.api.view`. Read handlers close over the system context but read `(:registry ctx)` on every request, so a live registry atom exposes fresh state without route handlers owning synchronization or domain logic. The handler currently exposes read-only endpoints: `GET /api/system`, `GET /api/things`, `GET /api/things/:thing-id`, `GET /api/items`, and `GET /api/items/:item-name`.
+
+HTTP handlers must not own framework behavior. They translate request parameters, call the read model, call the API view layer, and return JSON Ring response maps. Unknown Things, Items, and routes return JSON `404` responses; unsupported methods return JSON `405` responses. Command dispatch (`POST /api/items/:item-name/command`) and event streaming (`GET /api/events`) are separate follow-up slices because they cross into mutation/effects and core.async event subscriptions.
+
+The selected stack is Ring + Reitit + http-kit + Cheshire. Ring provides the standard request/response abstraction, Reitit provides data-driven routing, Cheshire encodes JSON, and http-kit is the adapter selected for later SSE/WebSocket support. The current commit tests handlers as plain Ring function calls without starting a server.
+
 ---
 
 ## Namespace structure
@@ -174,6 +182,7 @@ src/
     thing.clj        ← specs: Thing, Channel, Bridge, Status; constructors
     item.clj         ← specs: Item, GroupItem; projection cache shape
     link.clj         ← specs: Link; profile reference
+    api/http.clj     ← Ring/Reitit HTTP read edge over query + api.view
     api/view.clj     ← pure API view serialization over query read models
     registry.clj     ← state atom; read helpers; pure state→state helpers; raw storage
     query.clj        ← pure read model for API/UI edges; stable snapshots without raw indexes
@@ -435,8 +444,9 @@ openhab.link                  │
 openhab.registry (reads)      │ openhab.runtime   (apply-transition!)
 openhab.query                 │
 openhab.api.view              │
-openhab.projection            │ openhab.events    (publish!)
-openhab.transition            │ openhab.effects   (dispatch!, handlers)
+openhab.projection            │ openhab.api.http  (Ring handler)
+openhab.transition            │ openhab.events    (publish!)
+                              │ openhab.effects   (dispatch!, handlers)
 openhab.profile               │ openhab.reporting (channel reporting lifecycle)
                               │ openhab.bridge    (bridge topology/status helpers)
                               │ openhab.commands  (command entrypoint)
