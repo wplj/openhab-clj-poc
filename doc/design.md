@@ -208,6 +208,7 @@ src/
     api.clj           ← HTTP client, auth, token refresh
     device.clj        ← device-type dispatch; channel codec registration
     device/<type>.clj ← type-specific channel codecs + constructors
+    main.clj          ← runnable demo entrypoint for this addon
     system.clj        ← wires framework + addon; start!/stop!
 ```
 

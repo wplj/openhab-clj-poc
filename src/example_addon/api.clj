@@ -23,6 +23,6 @@
   (swap! device-states update thing-id merge commands))
 
 (defn reset-state!
-  "Test helper — resets all device states to the supplied map."
+  "Resets all in-memory device states to the supplied map."
   [states]
   (reset! device-states states))

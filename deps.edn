@@ -20,6 +20,7 @@
                        "-d" "test"]}
   :kaocha {:extra-paths ["test"]
            :extra-deps  {lambdaisland/kaocha {:mvn/version "1.91.1392"}}}
+  :run {:main-opts ["-m" "example-addon.main"]}
   :lint {:extra-paths ["test"]
          :extra-deps {clj-kondo/clj-kondo {:mvn/version "2026.04.15"}}
          :main-opts ["-m" "clj-kondo.main" "--lint" "src" "test"]}}}

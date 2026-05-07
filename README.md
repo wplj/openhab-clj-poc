@@ -50,6 +50,14 @@ Run lint:
 clojure -M:lint
 ```
 
+Run the in-memory example addon and local HTTP API:
+
+```powershell
+clojure -M:run
+```
+
+The demo binds to `127.0.0.1:8080` by default. Set `PORT` or JVM property `-Dport` to override the port.
+
 Start the example addon plus local HTTP API from a REPL:
 
 ```clojure
