@@ -172,7 +172,9 @@ HTTP handlers must not own framework behavior. They translate request parameters
 
 `GET /api/events` is an SSE stream over the decorated event bus. `events.clj` exposes `subscribe-all!` / `unsubscribe-all!` so API code does not reach into bus internals. `openhab.api.sse` formats each event as `event: <event-name>` plus a JSON `data:` object containing `type`, `topic`, and an API-safe `payload`; values pass through `openhab.api.view/api-value` before JSON encoding. The stream sends SSE comment heartbeats to keep idle connections alive through proxies and load balancers, and the http-kit `:on-close` callback unsubscribes the core.async channel on client disconnect or server shutdown.
 
-The selected stack is Ring + Reitit + http-kit + Cheshire. Ring provides the standard request/response abstraction, Reitit provides data-driven routing, Cheshire encodes JSON, and http-kit is the adapter selected for later SSE/WebSocket support. The current commit tests handlers as plain Ring function calls without starting a server.
+`openhab.api.server` owns the http-kit socket lifecycle and deliberately stays separate from route construction. `start!` calls `(openhab.api.http/handler ctx)`, passes http-kit options through, defaults to `{:ip "127.0.0.1" :port 8080}` so local development does not expose the API on the network, and returns `{:port port :stop! f}`. The stop function uses an explicit `compare-and-set!` guard, making shutdown idempotency visible even if the adapter stop function is also safe.
+
+The selected stack is Ring + Reitit + http-kit + Cheshire. Ring provides the standard request/response abstraction, Reitit provides data-driven routing, Cheshire encodes JSON, and http-kit is the adapter selected for SSE/WebSocket support. Handler tests run as plain Ring function calls; server lifecycle tests mock `http-kit/run-server` rather than binding real sockets.
 
 ---
 
@@ -185,6 +187,7 @@ src/
     item.clj         ← specs: Item, GroupItem; projection cache shape
     link.clj         ← specs: Link; profile reference
     api/http.clj     ← Ring/Reitit/http-kit HTTP edge over query, commands, and SSE
+    api/server.clj   ← http-kit server lifecycle wrapper around api/http handler
     api/sse.clj      ← SSE frame formatting and event-bus stream wiring
     api/view.clj     ← pure API view serialization over query read models
     registry.clj     ← state atom; read helpers; pure state→state helpers; raw storage
@@ -448,6 +451,7 @@ openhab.registry (reads)      │ openhab.runtime   (apply-transition!)
 openhab.query                 │
 openhab.api.view              │
 openhab.projection            │ openhab.api.http  (Ring/http-kit handler)
+                              │ openhab.api.server (http-kit run-server lifecycle)
 openhab.transition            │ openhab.api.sse   (SSE stream wiring)
                               │ openhab.events    (publish!)
                               │ openhab.effects   (dispatch!, handlers)
