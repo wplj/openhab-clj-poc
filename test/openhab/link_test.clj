@@ -1,4 +1,5 @@
 (ns openhab.link-test
+  "Tests for Link construction and composite key behavior."
   (:require [clojure.spec.alpha :as s]
             [clojure.test :refer [deftest is]]
             [openhab.link :as link]))

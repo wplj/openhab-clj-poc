@@ -1,4 +1,5 @@
 (ns openhab.reporting-test
+  "Tests for channel reporting as the adapter between polling and transitions."
   (:require [clojure.test :refer [deftest is]]
             [openhab.item :as item]
             [openhab.link :as link]

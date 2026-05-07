@@ -1,4 +1,8 @@
 (ns openhab.thing
+  "Thing and Bridge data shapes plus channel runtime helpers.
+
+   Things own source-of-truth channel runtime state. Desired values overlay
+   reported values until reporting settles or expires them."
   (:require [clojure.spec.alpha :as s]))
 
 (def status-values #{:initializing :online :offline :unknown})

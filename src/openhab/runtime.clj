@@ -1,4 +1,8 @@
 (ns openhab.runtime
+  "Imperative runtime boundary around pure transitions.
+
+   This is the only namespace that swaps the registry atom, publishes events, and
+   dispatches effects for a transition result."
   (:require [clojure.tools.logging :as log]
             [openhab.events :as events]))
 

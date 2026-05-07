@@ -1,4 +1,5 @@
 (ns openhab.projection-test
+  "Tests for channel-to-Item projection and multi-link guardrails."
   (:require [clojure.test :refer [deftest is]]
             [openhab.item :as item]
             [openhab.link :as link]

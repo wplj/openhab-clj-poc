@@ -1,4 +1,5 @@
 (ns openhab.commands-test
+  "Tests for public command dispatch and command-context validation."
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [openhab.commands :as commands]
             [openhab.effects :as effects]

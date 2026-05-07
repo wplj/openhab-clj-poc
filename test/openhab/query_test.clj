@@ -1,4 +1,5 @@
 (ns openhab.query-test
+  "Tests for stable query read models over registry state."
   (:require [clojure.test :refer [deftest is testing]]
             [openhab.item :as item]
             [openhab.link :as link]

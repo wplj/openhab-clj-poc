@@ -1,4 +1,8 @@
 (ns openhab.item
+  "Item data shape and item-local state helpers.
+
+   Items are cached views over linked Thing channels. Projection owns their
+   runtime state; structural item registration owns identity and metadata."
   (:require [clojure.spec.alpha :as s]))
 
 (s/def ::item-name (s/and string? seq))

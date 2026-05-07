@@ -1,4 +1,8 @@
 (ns example-addon.system
+  "Executable example addon wiring the framework pieces together.
+
+   It registers a bridge, one device Thing, Items, Links, profiles, effects, and
+   polling so integration tests exercise the real framework path."
   (:require [example-addon.api :as api]
             [example-addon.device :as device]
             [openhab.commands :as commands]

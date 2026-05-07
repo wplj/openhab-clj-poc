@@ -1,4 +1,5 @@
 (ns openhab.item-test
+  "Tests for Item constructors, specs, and projection-owned state updates."
   (:require [clojure.spec.alpha :as s]
             [clojure.test :refer [deftest is]]
             [openhab.item :as item]))

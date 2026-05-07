@@ -1,5 +1,9 @@
 (ns openhab.events
-  (:require [clojure.core.async :refer [chan close! mult pub put! sub tap unsub]]))
+  "Small core.async event bus with OpenHAB-style external event names and topics.
+
+   Producers publish domain event maps. The bus decorates them once, then supports
+   subscription by event type, exact topic, or all events for SSE-style streams."
+  (:require [clojure.core.async :refer [chan close! mult pub put! sub tap unsub untap]]))
 
 (defn- event-name [{:keys [event/type]}]
   (case type
@@ -41,6 +45,8 @@
   "Returns a new keyword/event bus. Subscribers can listen by :event/type or exact topic."
   ([] (make-bus 256))
   ([buf-size]
+   ;; One source channel fans out to separate pubs so type/topic subscribers cannot
+   ;; consume events from each other; subscribe-all! taps the same mult directly.
    (let [ch (chan buf-size)
          type-ch (chan buf-size)
          topic-ch (chan buf-size)
@@ -78,6 +84,18 @@
 (defn unsubscribe-topic!
   [{:keys [topic-pub]} topic sub-ch]
   (unsub topic-pub topic sub-ch)
+  (close! sub-ch))
+
+(defn subscribe-all!
+  "Returns a new channel subscribed to all decorated events on the bus."
+  [{:keys [mult]} buf-or-n]
+  (let [sub-ch (chan buf-or-n)]
+    (tap mult sub-ch)
+    sub-ch))
+
+(defn unsubscribe-all!
+  [{:keys [mult]} sub-ch]
+  (untap mult sub-ch)
   (close! sub-ch))
 
 (defn close-bus!

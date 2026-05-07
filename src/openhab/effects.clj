@@ -1,4 +1,8 @@
 (ns openhab.effects
+  "Effect dispatch helpers for work that must happen after state commits.
+
+   Transitions describe effects as data. Runtime dispatches them here so device
+   I/O cannot leak into retryable swap! functions."
   (:require [clojure.tools.logging :as log]
             [openhab.registry :as registry]
             [openhab.runtime :as runtime]
@@ -44,6 +48,7 @@
    send-fn must throw on failure; any return value indicates success."
   [send-fn]
   (fn [effect {:keys [registry bus effect-dispatcher profiles]}]
+    ;; The Thing is looked up at dispatch time because the committed state may have moved on.
     (let [thing (registry/get-thing registry (:thing-id effect))]
       (try
         (when-not thing

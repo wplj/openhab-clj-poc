@@ -1,4 +1,8 @@
 (ns openhab.registry
+  "Pure registry storage helpers plus an atom constructor.
+
+   Registry helpers maintain structural maps and reverse indexes atomically. They
+   do not enforce domain invariants; transition.clj owns those decisions."
   (:require [clojure.spec.alpha :as s]
             [openhab.item :as item]
             [openhab.link :as link]
@@ -7,6 +11,8 @@
 (defn empty-state
   "Returns the empty registry value."
   []
+  ;; Reverse indexes are stored with the primary maps so every structural helper can
+  ;; update them in the same pure state transformation.
   {:things {}
    :items {}
    :links {}

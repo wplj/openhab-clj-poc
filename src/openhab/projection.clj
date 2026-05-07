@@ -1,4 +1,8 @@
 (ns openhab.projection
+  "Pure projection from effective channel state into cached Item state.
+
+   Projection is unidirectional: Things own reported/desired channel values, and
+   Items are views updated through links and profiles."
   (:require [openhab.item :as item]
             [openhab.profile :as profile]
             [openhab.registry :as registry]

@@ -1,4 +1,5 @@
 (ns openhab.effects-test
+  "Tests for post-commit effect dispatch and failure correction."
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [openhab.effects :as effects]
             [openhab.events :as events]

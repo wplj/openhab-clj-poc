@@ -1,4 +1,5 @@
 (ns openhab.api.view-test
+  "Tests for API-safe value conversion and public read-model serialization."
   (:require [clojure.test :refer [deftest is]]
             [openhab.api.view :as view]
             [openhab.item :as item]

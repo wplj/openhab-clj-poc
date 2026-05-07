@@ -17,14 +17,13 @@ Implemented:
 - Example addon slice with an in-memory device API, profile codecs, synchronous/asynchronous startup reporting, command dispatch, event publication, and integration tests.
 - Pure query/read-model views for future API and UI edges, without exposing raw registry indexes or runtime internals.
 - Pure API view serialization over the query model, converting Clojure-native values to JSON-safe public values.
-- Ring/Reitit HTTP handler for system, Thing, Item, and Item command endpoints.
+- Ring/Reitit/http-kit HTTP handler for system, Thing, Item, Item command, and SSE event endpoints.
 
 Not implemented yet:
 
 - Persistence.
-- HTTP event streaming.
 - Authentication/authorization.
-- HTTP route and streaming contracts.
+- Production HTTP server lifecycle and hardening.
 - Group item aggregation.
 - Production addon packaging.
 

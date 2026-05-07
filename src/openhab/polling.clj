@@ -1,9 +1,14 @@
 (ns openhab.polling
+  "Generic polling scheduler with no registry or Thing knowledge.
+
+   Addons provide fetch and callback functions. Blocking fetches run on
+   core.async/io-thread so go blocks remain coordination code only."
   (:require [clojure.core.async :refer [<!! alts! chan close! go-loop io-thread timeout]]
             [clojure.tools.logging :as log]))
 
 (defn- fetch-on-io-thread
   [fetch-fn]
+  ;; Fetch functions are expected to do blocking I/O; keep that off the go block pool.
   (io-thread
     (try
       {:status :ok

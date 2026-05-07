@@ -1,4 +1,5 @@
 (ns example-addon.device
+  "Example air-purifier Thing definition and profile codec registration."
   (:require [openhab.profile :as profile]
             [openhab.thing :as thing]))
 

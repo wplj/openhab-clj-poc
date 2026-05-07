@@ -1,4 +1,5 @@
 (ns openhab.bridge-test
+  "Tests for bridge helper operations over the runtime transition path."
   (:require [clojure.test :refer [deftest is]]
             [openhab.bridge :as bridge]
             [openhab.events :as events]

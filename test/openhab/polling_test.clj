@@ -1,4 +1,5 @@
 (ns openhab.polling-test
+  "Tests for generic polling scheduling, callback isolation, and shutdown."
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [openhab.polling :as polling])
   (:import [java.util.logging Level Logger]))

@@ -1,4 +1,5 @@
 (ns openhab.events-test
+  "Tests for event decoration and bus subscription modes."
   (:require [clojure.core.async :refer [alts!! timeout]]
             [clojure.test :refer [deftest is]]
             [openhab.events :as events]
@@ -76,3 +77,17 @@
       (is (= "CommandFailedEvent" (:event/name ev)))
       (is (= "openhab/things/dev-1/commands/cmd-1/failed" (:event/topic ev))))
     (events/unsubscribe! bus :command/failed sub-ch)))
+
+(deftest all-event-subscriptions-receive-decorated-events
+  (let [bus (events/make-bus 32)
+        sub-ch (events/subscribe-all! bus 8)]
+    (events/publish! bus {:event/type :thing/added
+                          :thing-id "t1"})
+    (let [ev (await-event sub-ch)]
+      (is (= :thing/added (:event/type ev)))
+      (is (= "ThingAddedEvent" (:event/name ev)))
+      (is (= "openhab/things/t1/added" (:event/topic ev))))
+    (events/unsubscribe-all! bus sub-ch)
+    (events/publish! bus {:event/type :thing/added
+                          :thing-id "t2"})
+    (is (nil? (await-event sub-ch 50)))))

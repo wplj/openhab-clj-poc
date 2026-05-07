@@ -1,9 +1,14 @@
 (ns openhab.query
+  "Pure read-model boundary over registry state.
+
+   Query functions hide raw indexes and runtime internals while preserving typed
+   EDN values for API/view layers to serialize later."
   (:require [openhab.link :as link]
             [openhab.registry :as registry]
             [openhab.thing :as thing]))
 
 (defn- snapshot [registry-or-state]
+  ;; Deref once at the public boundary so nested read-model derivation is consistent.
   (if (instance? clojure.lang.IDeref registry-or-state)
     @registry-or-state
     registry-or-state))

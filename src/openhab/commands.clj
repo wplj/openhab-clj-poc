@@ -1,4 +1,8 @@
 (ns openhab.commands
+  "Public command entry point for item-level and channel-level commands.
+
+   This namespace owns imperative command concerns such as ids, timestamps, and
+   effect-dispatcher presence. State-dependent decisions stay in transitions."
   (:require [openhab.runtime :as runtime]
             [openhab.transition :as transition])
   (:import [java.time Instant]
@@ -17,6 +21,7 @@
   "Dispatches a raw channel command, bypassing profile encoding.
    value must already be a device-native channel value."
   [{:keys [registry bus profiles] :as context} {:keys [thing-id channel-id value]}]
+  ;; Id and time are captured once at the edge; the transition receives them as data.
   (let [dispatch-effect!  (require-effect-dispatcher context)
         command-id        (next-command-id)
         changed-at        (Instant/now)
@@ -34,6 +39,7 @@
 
 (defn- dispatch-item-command!
   [{:keys [registry bus profiles] :as context} {:keys [item-name value]}]
+  ;; Link/profile lookup happens inside the transition so reads and writes use one snapshot.
   (let [dispatch-effect!  (require-effect-dispatcher context)
         command-id        (next-command-id)
         changed-at        (Instant/now)

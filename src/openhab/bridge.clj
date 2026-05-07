@@ -1,4 +1,8 @@
 (ns openhab.bridge
+  "Bridge lifecycle helpers over the transition/runtime boundary.
+
+   A bridge is topology and shared connectivity. Child device polling is handled
+   by openhab.reporting so bridge code does not become a Java-style base class."
   (:require [openhab.registry :as registry]
             [openhab.reporting :as reporting]
             [openhab.runtime :as runtime]

@@ -1,4 +1,5 @@
 (ns openhab.thing-test
+  "Tests for Thing data shapes and reported/desired effective channel helpers."
   (:require [clojure.spec.alpha :as s]
             [clojure.test :refer [deftest is]]
             [openhab.thing :as thing]))

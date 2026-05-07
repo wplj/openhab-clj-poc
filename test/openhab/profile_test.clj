@@ -1,4 +1,5 @@
 (ns openhab.profile-test
+  "Tests for profile registration, codec conversion, and command encoding."
   (:require [clojure.test :refer [deftest is]]
             [openhab.link :as link]
             [openhab.profile :as profile]

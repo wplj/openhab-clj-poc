@@ -1,4 +1,8 @@
 (ns openhab.reporting
+  "Runtime adapter from addon channel snapshots into transition calls.
+
+   Reporting is separate from polling: polling schedules work, while reporting
+   knows which Thing receives a full channel snapshot or offline status."
   (:require [openhab.polling :as polling]
             [openhab.runtime :as runtime]
             [openhab.thing :as thing]

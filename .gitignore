@@ -1,7 +1,7 @@
 .cpcache/
 .clj-kondo/.cache/
 .clj-kondo/imports/
-.lsp/
+.lsp/.cache/
 target/
 out/
 *.class

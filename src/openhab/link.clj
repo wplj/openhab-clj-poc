@@ -1,4 +1,8 @@
 (ns openhab.link
+  "Item-to-channel link data shape.
+
+   A Link is structural metadata: it names the Item, Thing channel, and profile
+   used when projecting channel state or encoding item commands."
   (:require [clojure.spec.alpha :as s]
             [openhab.item :as item]
             [openhab.thing :as thing]))

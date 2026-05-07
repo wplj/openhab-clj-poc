@@ -1,5 +1,11 @@
 (ns openhab.api.http
+  "Ring/Reitit/http-kit HTTP edge for the public API.
+
+   Handlers are intentionally thin: read via openhab.query, serialize via
+   openhab.api.view, and delegate writes to openhab.commands."
   (:require [cheshire.core :as json]
+            [org.httpkit.server :as http-kit]
+            [openhab.api.sse :as sse]
             [openhab.api.view :as view]
             [openhab.commands :as commands]
             [openhab.query :as query]
@@ -107,6 +113,28 @@
              (commands/dispatch! ctx {:item-name item-name
                                       :value (get command "value")}))))))))
 
+(defn- event-stream-handler [ctx]
+  (fn [request]
+    (let [stop!* (atom nil)]
+      (http-kit/as-channel
+       request
+       {:on-open (fn [ch]
+                   ;; Subscribe only after the initial response is accepted; otherwise
+                   ;; a failed open would leave an orphaned event-bus tap.
+                   (when (http-kit/send! ch {:status 200
+                                             :headers {"Content-Type" sse/event-stream-content-type
+                                                       "Cache-Control" "no-cache"
+                                                       "Connection" "keep-alive"
+                                                       "X-Accel-Buffering" "no"}
+                                             :body (sse/heartbeat-frame)}
+                                         false)
+                     (reset! stop!*
+                             (sse/start-event-stream! (:bus ctx)
+                                                      #(http-kit/send! ch % false)))))
+        :on-close (fn [_ch _status]
+                    (when-let [stop! @stop!*]
+                      (stop!)))}))))
+
 (defn handler
   "Returns a Ring handler for the HTTP API.
 
@@ -120,7 +148,8 @@
      ["/api/things/:thing-id" {:get (thing-handler ctx)}]
      ["/api/items" {:get (items-handler ctx)}]
      ["/api/items/:item-name" {:get (item-handler ctx)}]
-     ["/api/items/:item-name/command" {:post (item-command-handler ctx)}]])
+     ["/api/items/:item-name/command" {:post (item-command-handler ctx)}]
+     ["/api/events" {:get (event-stream-handler ctx)}]])
    (ring/create-default-handler
     {:not-found (constantly (not-found-response))
      :method-not-allowed (constantly (method-not-allowed-response))})))

@@ -1,4 +1,8 @@
-(ns openhab.profile)
+(ns openhab.profile
+  "Named profile and channel codec registry.
+
+   Profiles are the data-friendly extension point between Thing channels and
+   Item state. Codecs keep common per-channel conversions out of core logic.")
 
 (defn infer-state-type
   "Infers a coarse state type keyword for internal item state values."
@@ -20,6 +24,8 @@
      :state-type (infer-state-type value)}))
 
 (defn- system-default-project-state [{:keys [profile-registry thing channel-id channel-value]}]
+  ;; The default profile delegates only the value conversion to a codec; it still
+  ;; provides the same projection contract as any custom profile.
   (if-let [codec (get-in profile-registry [:codecs [(:thing-type thing) channel-id]])]
     (normalize-projected-state
      (if-let [to-state (:to-state codec)]

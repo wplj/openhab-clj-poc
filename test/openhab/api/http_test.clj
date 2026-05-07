@@ -1,6 +1,9 @@
 (ns openhab.api.http-test
+  "Tests for HTTP route behavior without starting a real server."
   (:require [cheshire.core :as json]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is testing]]
+            [org.httpkit.server :as http-kit]
             [openhab.api.http :as http]
             [openhab.effects :as effects]
             [openhab.events :as events]
@@ -59,6 +62,16 @@
 
 (defn- registry-ctx [state]
   {:registry (atom state)})
+
+(defn- wait-until [pred]
+  (let [deadline (+ (System/currentTimeMillis) 500)]
+    (loop []
+      (cond
+        (pred) true
+        (> (System/currentTimeMillis) deadline) false
+        :else (do
+                (Thread/sleep 10)
+                (recur))))))
 
 (defn- command-ctx [state send-fn]
   (let [reg (atom state)
@@ -174,6 +187,62 @@
           response (request handler :post "/api/items/AP_FanSpeed/command" "{\"value\":5}")]
       (is (= 409 (:status response)))
       (is (= {:error "thing-offline"} (body response))))))
+
+(deftest get-events-opens-sse-stream-and-cleans-up-on-close
+  (let [bus (events/make-bus 32)
+        handler (http/handler {:registry (registry/make-registry)
+                               :bus bus})
+        sent (atom [])
+        close-callback (atom nil)
+        channel ::channel]
+    (with-redefs [http-kit/as-channel (fn [_request opts]
+                                        ((:on-open opts) channel)
+                                        (reset! close-callback (:on-close opts))
+                                        {:body channel})
+                  http-kit/send! (fn [ch data close-after-send?]
+                                   (swap! sent conj {:channel ch
+                                                     :data data
+                                                     :close? close-after-send?})
+                                   true)]
+      (is (= {:body channel} (request handler :get "/api/events")))
+      (is (= {:status 200
+              :headers {"Content-Type" "text/event-stream; charset=utf-8"
+                        "Cache-Control" "no-cache"
+                        "Connection" "keep-alive"
+                        "X-Accel-Buffering" "no"}
+              :body ":\n\n"}
+             (:data (first @sent))))
+      (is (false? (:close? (first @sent))))
+      (events/publish! bus {:event/type :thing/added
+                            :thing-id "t1"})
+      (is (wait-until #(= 2 (count @sent))))
+      (is (str/includes? (:data (second @sent)) "event: ThingAddedEvent\n"))
+      (is (str/includes? (:data (second @sent)) "\"topic\":\"openhab/things/t1/added\""))
+      (@close-callback channel :client-close)
+      (events/publish! bus {:event/type :thing/added
+                            :thing-id "t2"})
+      (Thread/sleep 50)
+      (is (= 2 (count @sent))))))
+
+(deftest get-events-does-not-subscribe-when-initial-send-fails
+  (let [bus (events/make-bus 32)
+        handler (http/handler {:registry (registry/make-registry)
+                               :bus bus})
+        sent (atom [])
+        channel ::channel]
+    (with-redefs [http-kit/as-channel (fn [_request opts]
+                                        ((:on-open opts) channel)
+                                        {:body channel})
+                  http-kit/send! (fn [ch data close-after-send?]
+                                   (swap! sent conj {:channel ch
+                                                     :data data
+                                                     :close? close-after-send?})
+                                   false)]
+      (is (= {:body channel} (request handler :get "/api/events")))
+      (events/publish! bus {:event/type :thing/added
+                            :thing-id "t1"})
+      (Thread/sleep 50)
+      (is (= 1 (count @sent))))))
 
 (deftest handler-reads-live-registry-on-each-request
   (let [reg (registry/make-registry)

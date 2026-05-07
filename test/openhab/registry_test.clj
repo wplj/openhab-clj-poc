@@ -1,4 +1,5 @@
 (ns openhab.registry-test
+  "Tests for pure registry storage helpers and reverse-index maintenance."
   (:require [clojure.test :refer [deftest is]]
             [openhab.item :as item]
             [openhab.link :as link]

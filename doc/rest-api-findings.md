@@ -136,9 +136,18 @@ The HTTP layer is a thin read/write edge over the registry and event bus:
 
 - `GET /api/system`, `/api/things`, `/api/things/{thing-id}`, `/api/items`, `/api/items/{item-name}` — read from the registry atom through `openhab.query` and `openhab.api.view`
 - `POST /api/items/{item-name}/command` — parse `{"value": ...}` and call `openhab.commands/dispatch!`
-- `GET /api/events` — subscribe to the `openhab.events` publication
+- `GET /api/events` — SSE stream over all decorated `openhab.events` publications
 
 The framework keeps the registry correct; the HTTP layer should expose it without owning domain behavior.
+
+Proposed SSE frame shape:
+
+```text
+event: ItemStateChangedEvent
+data: {"type":"ItemStateChangedEvent","topic":"openhab/items/AP_FanSpeed/statechanged","payload":{...}}
+```
+
+Unlike OpenHAB's current REST event stream, this project does not double-serialize the payload as a JSON string inside JSON. The `data:` field is one JSON object whose values are serialized through `openhab.api.view/api-value`.
 
 ---
 

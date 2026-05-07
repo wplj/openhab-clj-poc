@@ -1,0 +1,10 @@
+;; Project-local clojure-lsp settings for editor diagnostics.
+;;
+;; clojure-lsp normally derives source paths from deps.edn, but editor clients may
+;; still watch or analyze service/cache folders. Keep those out of analysis and keep
+;; library API vars from being reported as unused.
+{:paths-ignore-regex [".*[\\\\/]\\.trunk([\\\\/].*)?"
+                      ".*[\\\\/]\\.cpcache([\\\\/].*)?"
+                      ".*[\\\\/]\\.clj-kondo[\\\\/](\\.cache|imports)([\\\\/].*)?"
+                      ".*[\\\\/]\\.lsp[\\\\/]\\.cache([\\\\/].*)?"]
+ :linters {:clojure-lsp/unused-public-var {:level :off}}}

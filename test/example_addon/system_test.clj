@@ -1,4 +1,5 @@
 (ns example-addon.system-test
+  "Integration tests for the executable example addon lifecycle."
   (:require [clojure.core.async :as async]
             [clojure.test :refer [deftest is testing]]
             [example-addon.api :as api]

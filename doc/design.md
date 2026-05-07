@@ -166,9 +166,11 @@ This layer intentionally keeps Clojure keyword keys in the returned maps. That i
 
 ### HTTP API boundary
 
-`openhab.api.http` is the thin Ring/Reitit edge over `query.clj`, `openhab.api.view`, and `openhab.commands`. Read handlers close over the system context but read `(:registry ctx)` on every request, so a live registry atom exposes fresh state without route handlers owning synchronization or domain logic. The handler currently exposes `GET /api/system`, `GET /api/things`, `GET /api/things/:thing-id`, `GET /api/items`, `GET /api/items/:item-name`, and `POST /api/items/:item-name/command`.
+`openhab.api.http` is the thin Ring/Reitit/http-kit edge over `query.clj`, `openhab.api.view`, `openhab.commands`, and `openhab.api.sse`. Read handlers close over the system context but read `(:registry ctx)` on every request, so a live registry atom exposes fresh state without route handlers owning synchronization or domain logic. The handler currently exposes `GET /api/system`, `GET /api/things`, `GET /api/things/:thing-id`, `GET /api/items`, `GET /api/items/:item-name`, `POST /api/items/:item-name/command`, and `GET /api/events`.
 
-HTTP handlers must not own framework behavior. They translate request parameters, call the read model/API view layer or command entrypoint, and return JSON Ring response maps. Unknown Things, Items, and routes return JSON `404` responses; unsupported methods return JSON `405` responses. Item command requests accept JSON objects with a present, non-null `"value"` key and return `202 {"accepted": true}` when the command transition accepts. Malformed JSON, empty bodies, non-object bodies, and missing/null values return JSON `400` responses. `:item-not-found` maps to `404`; all other command rejection reasons map to `409` with the reason string so clients can distinguish conflicts such as `"thing-offline"` and `"channel-read-only"`. Event streaming (`GET /api/events`) remains a separate follow-up slice because it crosses into core.async event subscriptions.
+HTTP handlers must not own framework behavior. They translate request parameters, call the read model/API view layer, command entrypoint, or SSE stream adapter, and return Ring response maps. Unknown Things, Items, and routes return JSON `404` responses; unsupported methods return JSON `405` responses. Item command requests accept JSON objects with a present, non-null `"value"` key and return `202 {"accepted": true}` when the command transition accepts. Malformed JSON, empty bodies, non-object bodies, and missing/null values return JSON `400` responses. `:item-not-found` maps to `404`; all other command rejection reasons map to `409` with the reason string so clients can distinguish conflicts such as `"thing-offline"` and `"channel-read-only"`.
+
+`GET /api/events` is an SSE stream over the decorated event bus. `events.clj` exposes `subscribe-all!` / `unsubscribe-all!` so API code does not reach into bus internals. `openhab.api.sse` formats each event as `event: <event-name>` plus a JSON `data:` object containing `type`, `topic`, and an API-safe `payload`; values pass through `openhab.api.view/api-value` before JSON encoding. The stream sends SSE comment heartbeats to keep idle connections alive through proxies and load balancers, and the http-kit `:on-close` callback unsubscribes the core.async channel on client disconnect or server shutdown.
 
 The selected stack is Ring + Reitit + http-kit + Cheshire. Ring provides the standard request/response abstraction, Reitit provides data-driven routing, Cheshire encodes JSON, and http-kit is the adapter selected for later SSE/WebSocket support. The current commit tests handlers as plain Ring function calls without starting a server.
 
@@ -182,7 +184,8 @@ src/
     thing.clj        ← specs: Thing, Channel, Bridge, Status; constructors
     item.clj         ← specs: Item, GroupItem; projection cache shape
     link.clj         ← specs: Link; profile reference
-    api/http.clj     ← Ring/Reitit HTTP read edge over query + api.view
+    api/http.clj     ← Ring/Reitit/http-kit HTTP edge over query, commands, and SSE
+    api/sse.clj      ← SSE frame formatting and event-bus stream wiring
     api/view.clj     ← pure API view serialization over query read models
     registry.clj     ← state atom; read helpers; pure state→state helpers; raw storage
     query.clj        ← pure read model for API/UI edges; stable snapshots without raw indexes
@@ -444,8 +447,9 @@ openhab.link                  │
 openhab.registry (reads)      │ openhab.runtime   (apply-transition!)
 openhab.query                 │
 openhab.api.view              │
-openhab.projection            │ openhab.api.http  (Ring handler)
-openhab.transition            │ openhab.events    (publish!)
+openhab.projection            │ openhab.api.http  (Ring/http-kit handler)
+openhab.transition            │ openhab.api.sse   (SSE stream wiring)
+                              │ openhab.events    (publish!)
                               │ openhab.effects   (dispatch!, handlers)
 openhab.profile               │ openhab.reporting (channel reporting lifecycle)
                               │ openhab.bridge    (bridge topology/status helpers)

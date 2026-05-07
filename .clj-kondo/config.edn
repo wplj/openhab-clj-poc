@@ -1,5 +1,6 @@
-;; openhab.* is a framework/library API. Public vars are intentionally exported for addons,
-;; tests, and REPL/system wiring, so "unused public var" is noise here.
+;; Keep accidental broad lint runs away from service/cache folders. The project lint
+;; alias already targets only src and test, but editors and ad-hoc commands can be wider.
+;; Match both slash styles because Windows paths may reach clj-kondo with backslashes.
 ;; core.async/io-thread is present in current core.async, but clj-kondo does not resolve it yet.
-{:linters {:unused-public-var {:level :off}
-           :unresolved-var {:exclude [clojure.core.async/io-thread]}}}
+{:exclude-files "(^|[\\\\/])(\\.trunk|\\.cpcache)([\\\\/]|$)|(^|[\\\\/])\\.clj-kondo[\\\\/](\\.cache|imports)([\\\\/]|$)|(^|[\\\\/])\\.lsp[\\\\/]\\.cache([\\\\/]|$)"
+ :linters {:unresolved-var {:exclude [clojure.core.async/io-thread]}}}

@@ -1,4 +1,5 @@
 (ns openhab.runtime-test
+  "Tests for atomic transition application, event publication, and effect dispatch."
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [openhab.runtime :as runtime])
   (:import [java.util.logging Level Logger]))

@@ -1,4 +1,8 @@
 (ns openhab.transition
+  "Pure state transitions for structural and runtime changes.
+
+   Every function returns data describing the new state plus events/effects/result.
+   No atoms, I/O, clocks, or event publication belong here."
   (:require [clojure.set :as set]
             [openhab.item :as item]
             [openhab.link :as link]
@@ -9,6 +13,7 @@
 
 (def ^:private desired-expiry-threshold 3)
 
+;; The canonical transition return shape. Runtime code interprets this after swap!.
 (defn- result
   ([state]
    {:state state

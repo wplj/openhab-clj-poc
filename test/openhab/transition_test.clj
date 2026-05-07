@@ -1,4 +1,5 @@
 (ns openhab.transition-test
+  "Tests for pure domain transitions and their emitted events/effects/results."
   (:require [clojure.test :refer [deftest is]]
             [openhab.item :as item]
             [openhab.link :as link]

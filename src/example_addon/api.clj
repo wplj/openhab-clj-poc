@@ -1,4 +1,8 @@
-(ns example-addon.api)
+(ns example-addon.api
+  "Tiny in-memory appliance API used by the example addon tests.
+
+   This simulates the remote side of a binding without introducing HTTP fixtures
+   or external services into the core PoC.")
 
 ;; In-memory device state — simulates a remote appliance API.
 ;; Keyed by device-id so multiple devices can coexist.

@@ -1,4 +1,8 @@
-(ns openhab.api.view)
+(ns openhab.api.view
+  "Transport-neutral conversion from query read models to API-safe values.
+
+   The query layer keeps typed EDN. This layer makes those values portable JSON
+   data without choosing route names, HTTP status codes, or GraphQL field shapes.")
 
 (defn- keyword-string [x]
   (cond->> (name x)
@@ -11,6 +15,7 @@
     :else (str k)))
 
 (defn- json-number? [value]
+  ;; JSON has no portable representation for ratios, NaN, or infinities.
   (cond
     (ratio? value) false
     (instance? Double value) (Double/isFinite value)
