@@ -57,7 +57,6 @@
                                      :interval-ms interval-ms
                                      :initial-fetch? initial-fetch?}))
 
-
 (defn stop!
   "Stops bridge polling and sets the bridge offline."
   [{:keys [registry bus effect-dispatcher]} bridge-id poll-handle]
@@ -68,4 +67,3 @@
                              transition/set-bridge-status
                              bridge-id
                              (thing/status :offline)))
-

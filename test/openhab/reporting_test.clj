@@ -88,5 +88,3 @@
         (is (instance? clojure.lang.ExceptionInfo (:error (:initial-result handle))))
         (finally
           (reporting/stop-channel-polling! handle))))))
-
-

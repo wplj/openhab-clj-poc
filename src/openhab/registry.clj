@@ -168,7 +168,6 @@
   [state item-name thing-id channel-id]
   (remove-link-key* state [item-name thing-id channel-id]))
 
-
 (s/def ::things (s/map-of ::thing/thing-id ::thing/thing))
 (s/def ::items (s/map-of ::item/item-name ::item/item))
 (s/def ::links (s/map-of vector? ::link/link))

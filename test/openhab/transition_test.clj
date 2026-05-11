@@ -79,7 +79,6 @@
     (is (= {:ok false :reason :not-a-bridge} (:result result)))
     (is (some? (registry/get-thing (:state result) "child-1")))))
 
-
 (deftest remove-item-removes-item-and-its-links
   (let [result (transition/remove-item (base-state) "FanSpeed")]
     (is (= {:ok true :item-name "FanSpeed"} (:result result)))
@@ -324,10 +323,6 @@
     (is (= 30 (:state (registry/get-item (:state result) "FanSpeed"))))
     (is (some #(= :link/removed (:event/type %)) (:events result)))
     (is (not (some #(= :item/state-changed (:event/type %)) (:events result))))))
-
-
-
-
 
 (deftest remove-item-emits-link-removed-events-for-removed-links
   (let [result (transition/remove-item (base-state) "FanSpeed")]

@@ -63,8 +63,6 @@
       (is (= :thing/added (:event/type ev))))
     (events/unsubscribe-topic! bus topic sub-ch)))
 
-
-
 (deftest command-failed-events-have-name-and-topic
   (let [bus    (events/make-bus 32)
         sub-ch (events/subscribe! bus :command/failed 8)]

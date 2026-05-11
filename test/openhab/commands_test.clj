@@ -133,4 +133,3 @@
     (is (thrown-with-msg? clojure.lang.ExceptionInfo
                           #"Missing :effect-dispatcher"
                           (commands/dispatch! context {:item-name "FanSpeed" :value 9})))))
-

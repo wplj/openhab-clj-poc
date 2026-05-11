@@ -97,4 +97,3 @@
 (deftest project-items-skips-missing-items
   (let [result (projection/project-items (base-state) (profiles) ["FanSpeed" "NoSuchItem"] java.time.Instant/EPOCH)]
     (is (= 1 (count (:changes result))))))
-

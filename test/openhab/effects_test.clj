@@ -106,4 +106,3 @@
     ;; command-failed on a nonexistent thing-id is a no-op; real thing's desired is unaffected
     (is (= {:value 9 :age 0 :command-id "cmd-1"}
            (get-in @(:registry ctx') [:things "dev-1" :runtime :desired :fan-speed])))))
-

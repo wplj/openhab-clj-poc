@@ -114,5 +114,3 @@
   "Sends a command to item-name with value. Returns the transition result map."
   [ctx item-name value]
   (commands/dispatch! ctx {:item-name item-name :value value}))
-
-

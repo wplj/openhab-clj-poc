@@ -33,4 +33,3 @@
   (let [i (assoc (item/make-item "Temp" "Number")
                  :metadata {"unit" {:value "C" :config {}}})]
     (is (s/valid? ::item/item i))))
-
