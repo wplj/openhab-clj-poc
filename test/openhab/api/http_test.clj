@@ -109,6 +109,21 @@
         (is (= ["AP_FanSpeed" "AP_Temp"]
                (mapv :item-name (body response))))))))
 
+(deftest get-links-returns-json-list
+  (let [handler (http/handler (registry-ctx (sample-state)))
+        response (request handler :get "/api/links")]
+    (is (= 200 (:status response)))
+    (is (= expected-json-content-type (get-in response [:headers "Content-Type"])))
+    (is (= [{:item-name "AP_FanSpeed"
+             :thing-id "ap-1"
+             :channel-id "fan-speed"
+             :profile "system:default"}
+            {:item-name "AP_Temp"
+             :thing-id "ap-1"
+             :channel-id "temp"
+             :profile "system:default"}]
+           (body response)))))
+
 (deftest get-single-thing-and-item-return-json-resources
   (let [handler (http/handler (registry-ctx (sample-state)))]
     (testing "thing"

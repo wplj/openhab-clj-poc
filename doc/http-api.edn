@@ -32,6 +32,11 @@
    :path-params {:item-name :string}
    :responses {200 {:body :item}
                404 {:body {:error "not found"}}}}
+  {:id :links
+   :method :get
+   :path "/api/links"
+   :summary "Return all Item-to-Channel Links."
+   :responses {200 {:body [:link]}}}
   {:id :item-command
    :method :post
    :path "/api/items/:item-name/command"

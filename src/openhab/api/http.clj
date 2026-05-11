@@ -60,6 +60,11 @@
     (json-response (mapv view/item
                          (query/items (registry ctx))))))
 
+(defn- links-handler [ctx]
+  (fn [_]
+    (json-response (mapv view/link
+                         (query/links (registry ctx))))))
+
 (defn- item-handler [ctx]
   (fn [request]
     (let [item-name (get-in request [:path-params :item-name])]
@@ -156,6 +161,10 @@
     :method :get
     :path "/api/items/:item-name"
     :handler-fn item-handler}
+   {:id :links
+    :method :get
+    :path "/api/links"
+    :handler-fn links-handler}
    {:id :item-command
     :method :post
     :path "/api/items/:item-name/command"
