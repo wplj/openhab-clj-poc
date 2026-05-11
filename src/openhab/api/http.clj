@@ -21,7 +21,7 @@
     :headers {"Content-Type" json-content-type}
     :body (json/generate-string body)}))
 
-(defn- not-found-response []
+(def ^:private not-found-response
   (json-response 404 {:error "not found"}))
 
 (defn- bad-request-response [message]
@@ -32,7 +32,7 @@
                                (name reason)
                                "command-rejected")}))
 
-(defn- method-not-allowed-response []
+(def ^:private method-not-allowed-response
   (json-response 405 {:error "method not allowed"}))
 
 (defn- registry [ctx]
@@ -53,7 +53,7 @@
     (let [thing-id (get-in request [:path-params :thing-id])]
       (if-let [thing (query/thing (registry ctx) thing-id)]
         (json-response (view/thing thing))
-        (not-found-response)))))
+        not-found-response))))
 
 (defn- items-handler [ctx]
   (fn [_]
@@ -65,7 +65,7 @@
     (let [item-name (get-in request [:path-params :item-name])]
       (if-let [item (query/item (registry ctx) item-name)]
         (json-response (view/item item))
-        (not-found-response)))))
+        not-found-response))))
 
 (defn- parse-json-body [request]
   (let [body (some-> (:body request) slurp)]
@@ -85,7 +85,7 @@
     (json-response 202 {:accepted true})
 
     (= :item-not-found reason)
-    (not-found-response)
+    not-found-response
 
     (= :invalid-command reason)
     (bad-request-response (name reason))
@@ -135,6 +135,47 @@
                     (when-let [stop! @stop!*]
                       (stop!)))}))))
 
+(def ^:private route-specs
+  [{:id :system-snapshot
+    :method :get
+    :path "/api/system"
+    :handler-fn system-handler}
+   {:id :things
+    :method :get
+    :path "/api/things"
+    :handler-fn things-handler}
+   {:id :thing
+    :method :get
+    :path "/api/things/:thing-id"
+    :handler-fn thing-handler}
+   {:id :items
+    :method :get
+    :path "/api/items"
+    :handler-fn items-handler}
+   {:id :item
+    :method :get
+    :path "/api/items/:item-name"
+    :handler-fn item-handler}
+   {:id :item-command
+    :method :post
+    :path "/api/items/:item-name/command"
+    :handler-fn item-command-handler}
+   {:id :events
+    :method :get
+    :path "/api/events"
+    :handler-fn event-stream-handler}])
+
+(def route-endpoints
+  "Stable route metadata used by the API contract drift test.
+
+   Handler functions stay private; this exposes only the public API identity."
+  (mapv #(select-keys % [:id :method :path]) route-specs))
+
+(defn- routes [ctx]
+  (mapv (fn [{:keys [path method handler-fn]}]
+          [path {method (handler-fn ctx)}])
+        route-specs))
+
 (defn handler
   "Returns a Ring handler for the HTTP API.
 
@@ -142,14 +183,7 @@
    atoms expose fresh state without route handlers owning synchronization or domain logic."
   [ctx]
   (ring/ring-handler
-   (ring/router
-    [["/api/system" {:get (system-handler ctx)}]
-     ["/api/things" {:get (things-handler ctx)}]
-     ["/api/things/:thing-id" {:get (thing-handler ctx)}]
-     ["/api/items" {:get (items-handler ctx)}]
-     ["/api/items/:item-name" {:get (item-handler ctx)}]
-     ["/api/items/:item-name/command" {:post (item-command-handler ctx)}]
-     ["/api/events" {:get (event-stream-handler ctx)}]])
+   (ring/router (routes ctx))
    (ring/create-default-handler
-    {:not-found (constantly (not-found-response))
-     :method-not-allowed (constantly (method-not-allowed-response))})))
+    {:not-found (constantly not-found-response)
+     :method-not-allowed (constantly method-not-allowed-response)})))

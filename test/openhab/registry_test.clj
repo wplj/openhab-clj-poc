@@ -1,6 +1,7 @@
 (ns openhab.registry-test
   "Tests for pure registry storage helpers and reverse-index maintenance."
-  (:require [clojure.test :refer [deftest is]]
+  (:require [clojure.spec.alpha :as s]
+            [clojure.test :refer [deftest is]]
             [openhab.item :as item]
             [openhab.link :as link]
             [openhab.registry :as registry]
@@ -13,7 +14,8 @@
           :item->links {}
           :channel->links {}
           :bridge->things {}}
-         (registry/empty-state))))
+         (registry/empty-state)))
+  (is (s/valid? ::registry/registry (registry/empty-state))))
 
 (deftest put-thing-maintains-reverse-bridge-index
   (let [state (-> (registry/empty-state)

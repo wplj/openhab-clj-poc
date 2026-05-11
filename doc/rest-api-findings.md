@@ -140,6 +140,8 @@ The HTTP layer is a thin read/write edge over the registry and event bus:
 
 The framework keeps the registry correct; the HTTP layer should expose it without owning domain behavior.
 
+The current route contract lives in `doc/http-api.edn`. It is intentionally smaller than OpenAPI for now: it records the public method/path surface and concise request/response expectations while the product-level API policy remains in flux.
+
 Proposed SSE frame shape:
 
 ```text

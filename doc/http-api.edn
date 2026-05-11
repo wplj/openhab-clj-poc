@@ -1,0 +1,51 @@
+{:version 1
+ :format :openhab-clj/http-api
+ :base-path "/api"
+ :description "Machine-readable contract for the current HTTP edge. This file documents the public method/path surface; request and response shapes are intentionally lightweight until auth, persistence, and product-level API policy are designed."
+ :endpoints
+ [{:id :system-snapshot
+   :method :get
+   :path "/api/system"
+   :summary "Return a full system snapshot."
+   :responses {200 {:body :system-snapshot}}}
+  {:id :things
+   :method :get
+   :path "/api/things"
+   :summary "Return all Things."
+   :responses {200 {:body [:thing]}}}
+  {:id :thing
+   :method :get
+   :path "/api/things/:thing-id"
+   :summary "Return one Thing by id."
+   :path-params {:thing-id :string}
+   :responses {200 {:body :thing}
+               404 {:body {:error "not found"}}}}
+  {:id :items
+   :method :get
+   :path "/api/items"
+   :summary "Return all Items."
+   :responses {200 {:body [:item]}}}
+  {:id :item
+   :method :get
+   :path "/api/items/:item-name"
+   :summary "Return one Item by name."
+   :path-params {:item-name :string}
+   :responses {200 {:body :item}
+               404 {:body {:error "not found"}}}}
+  {:id :item-command
+   :method :post
+   :path "/api/items/:item-name/command"
+   :summary "Send a command to the Item's linked Channel."
+   :path-params {:item-name :string}
+   :request {:content-type "application/json"
+             :body {:value :non-null-json-value}}
+   :responses {202 {:body {:accepted true}}
+               400 {:body {:error "empty body | malformed json | expected json object | missing or null value | invalid-command"}}
+               404 {:body {:error "not found"}}
+               409 {:body {:error "domain rejection reason, for example thing-offline or channel-read-only"}}}}
+  {:id :events
+   :method :get
+   :path "/api/events"
+   :summary "Open an SSE stream over decorated framework events."
+   :responses {200 {:content-type "text/event-stream"
+                    :body :sse-stream}}}]}

@@ -77,6 +77,7 @@ The project currently uses Clojure 1.12.x at runtime through `deps.edn`.
 ## Documentation
 
 - [Architecture](doc/design.md)
+- [HTTP API contract](doc/http-api.edn)
 - [HTTP API research](doc/rest-api-findings.md)
 
 ## Status
