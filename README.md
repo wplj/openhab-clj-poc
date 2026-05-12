@@ -17,7 +17,7 @@ Implemented:
 - Example addon slice with an in-memory device API, profile codecs, synchronous/asynchronous startup reporting, command dispatch, event publication, and integration tests.
 - Pure query/read-model views for future API and UI edges, without exposing raw registry indexes or runtime internals.
 - Pure API view serialization over the query model, converting Clojure-native values to JSON-safe public values.
-- Ring/Reitit/http-kit HTTP handler and server lifecycle for system, Thing, Item, Link, Item command, and SSE event endpoints.
+- Ring/Reitit/http-kit HTTP handler and server lifecycle for system, Thing, Item, Link, filtered Link, Item command, and SSE event endpoints.
 
 Not implemented yet:
 

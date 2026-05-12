@@ -65,11 +65,33 @@
     (json-response (mapv view/link
                          (query/links (registry ctx))))))
 
+(defn- item-links-handler [ctx]
+  (fn [request]
+    ;; Keep the existence check and link lookup on the same registry snapshot.
+    (let [state @(registry ctx)
+          item-name (get-in request [:path-params :item-name])]
+      (if (query/item state item-name)
+        (json-response (mapv view/link
+                             (query/links-for-item state item-name)))
+        not-found-response))))
+
 (defn- item-handler [ctx]
   (fn [request]
     (let [item-name (get-in request [:path-params :item-name])]
       (if-let [item (query/item (registry ctx) item-name)]
         (json-response (view/item item))
+        not-found-response))))
+
+(defn- channel-links-handler [ctx]
+  (fn [request]
+    ;; query/thing returns a read model; :channels is a vector, not the raw channel map.
+    (let [state @(registry ctx)
+          {:keys [thing-id channel-id]} (:path-params request)
+          channel-id (keyword channel-id)
+          thing-view (query/thing state thing-id)]
+      (if (some #(= channel-id (:channel-id %)) (:channels thing-view))
+        (json-response (mapv view/link
+                             (query/links-for-channel state thing-id channel-id)))
         not-found-response))))
 
 (defn- parse-json-body [request]
@@ -161,10 +183,18 @@
     :method :get
     :path "/api/items/:item-name"
     :handler-fn item-handler}
+   {:id :item-links
+    :method :get
+    :path "/api/items/:item-name/links"
+    :handler-fn item-links-handler}
    {:id :links
     :method :get
     :path "/api/links"
     :handler-fn links-handler}
+   {:id :channel-links
+    :method :get
+    :path "/api/things/:thing-id/channels/:channel-id/links"
+    :handler-fn channel-links-handler}
    {:id :item-command
     :method :post
     :path "/api/items/:item-name/command"

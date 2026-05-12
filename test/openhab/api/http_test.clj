@@ -124,6 +124,53 @@
              :profile "system:default"}]
            (body response)))))
 
+(deftest get-item-links-distinguishes-missing-and-unlinked-items
+  (let [state (registry/put-item (sample-state)
+                                 (item/make-item "Unlinked" "String"))
+        handler (http/handler (registry-ctx state))]
+    (testing "linked item"
+      (let [response (request handler :get "/api/items/AP_FanSpeed/links")]
+        (is (= 200 (:status response)))
+        (is (= [{:item-name "AP_FanSpeed"
+                 :thing-id "ap-1"
+                 :channel-id "fan-speed"
+                 :profile "system:default"}]
+               (body response)))))
+    (testing "existing unlinked item"
+      (let [response (request handler :get "/api/items/Unlinked/links")]
+        (is (= 200 (:status response)))
+        (is (= [] (body response)))))
+    (testing "missing item"
+      (let [response (request handler :get "/api/items/Missing/links")]
+        (is (= 404 (:status response)))
+        (is (= {:error "not found"} (body response)))))))
+
+(deftest get-channel-links-distinguishes-missing-and-unlinked-channels
+  (let [state (assoc-in (sample-state)
+                        [:things "ap-1" :channels :humidity]
+                        {:access :ro :channel-type :number})
+        handler (http/handler (registry-ctx state))]
+    (testing "linked channel"
+      (let [response (request handler :get "/api/things/ap-1/channels/temp/links")]
+        (is (= 200 (:status response)))
+        (is (= [{:item-name "AP_Temp"
+                 :thing-id "ap-1"
+                 :channel-id "temp"
+                 :profile "system:default"}]
+               (body response)))))
+    (testing "existing unlinked channel"
+      (let [response (request handler :get "/api/things/ap-1/channels/humidity/links")]
+        (is (= 200 (:status response)))
+        (is (= [] (body response)))))
+    (testing "missing thing"
+      (let [response (request handler :get "/api/things/missing/channels/temp/links")]
+        (is (= 404 (:status response)))
+        (is (= {:error "not found"} (body response)))))
+    (testing "missing channel"
+      (let [response (request handler :get "/api/things/ap-1/channels/missing/links")]
+        (is (= 404 (:status response)))
+        (is (= {:error "not found"} (body response)))))))
+
 (deftest get-single-thing-and-item-return-json-resources
   (let [handler (http/handler (registry-ctx (sample-state)))]
     (testing "thing"

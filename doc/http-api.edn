@@ -32,11 +32,26 @@
    :path-params {:item-name :string}
    :responses {200 {:body :item}
                404 {:body {:error "not found"}}}}
+  {:id :item-links
+   :method :get
+   :path "/api/items/:item-name/links"
+   :summary "Return Links for one Item. Unknown Items return 404; known unlinked Items return an empty list."
+   :path-params {:item-name :string}
+   :responses {200 {:body [:link]}
+               404 {:body {:error "not found"}}}}
   {:id :links
    :method :get
    :path "/api/links"
    :summary "Return all Item-to-Channel Links."
    :responses {200 {:body [:link]}}}
+  {:id :channel-links
+   :method :get
+   :path "/api/things/:thing-id/channels/:channel-id/links"
+   :summary "Return Links for one Channel. Unknown Things or Channels return 404; known unlinked Channels return an empty list."
+   :path-params {:thing-id :string
+                 :channel-id :keyword-name}
+   :responses {200 {:body [:link]}
+               404 {:body {:error "not found"}}}}
   {:id :item-command
    :method :post
    :path "/api/items/:item-name/command"
