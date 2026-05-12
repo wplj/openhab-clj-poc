@@ -286,6 +286,37 @@
       (Thread/sleep 50)
       (is (= 2 (count @sent))))))
 
+(deftest get-events-can-filter-by-exact-topic
+  (let [bus (events/make-bus 32)
+        handler (http/handler {:registry (registry/make-registry)
+                               :bus bus})
+        sent (atom [])
+        close-callback (atom nil)
+        channel ::channel]
+    (with-redefs [http-kit/as-channel (fn [_request opts]
+                                        ((:on-open opts) channel)
+                                        (reset! close-callback (:on-close opts))
+                                        {:body channel})
+                  http-kit/send! (fn [ch data close-after-send?]
+                                   (swap! sent conj {:channel ch
+                                                     :data data
+                                                     :close? close-after-send?})
+                                   true)]
+      (is (= {:body channel}
+             (handler {:request-method :get
+                       :uri "/api/events"
+                       :query-string "topic=openhab%2Fitems%2FAP_FanSpeed%2Fstatechanged"})))
+      (events/publish! bus {:event/type :thing/added
+                            :thing-id "t1"})
+      (Thread/sleep 50)
+      (is (= 1 (count @sent)))
+      (events/publish! bus {:event/type :item/state-changed
+                            :item-name "AP_FanSpeed"
+                            :state 5})
+      (is (wait-until #(= 2 (count @sent))))
+      (is (str/includes? (:data (second @sent)) "\"topic\":\"openhab/items/AP_FanSpeed/statechanged\""))
+      (@close-callback channel :client-close))))
+
 (deftest get-events-does-not-subscribe-when-initial-send-fails
   (let [bus (events/make-bus 32)
         handler (http/handler {:registry (registry/make-registry)

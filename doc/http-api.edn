@@ -66,6 +66,9 @@
   {:id :events
    :method :get
    :path "/api/events"
-   :summary "Open an SSE stream over decorated framework events."
+   :summary "Open an SSE stream over decorated framework events. Optional topic query param filters by exact event topic."
+   :query-params {:topic {:type :string
+                          :optional true
+                          :semantics :exact-event-topic}}
    :responses {200 {:content-type "text/event-stream"
                     :body :sse-stream}}}]}

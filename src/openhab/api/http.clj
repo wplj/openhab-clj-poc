@@ -4,12 +4,15 @@
    Handlers are intentionally thin: read via openhab.query, serialize via
    openhab.api.view, and delegate writes to openhab.commands."
   (:require [cheshire.core :as json]
+            [clojure.string :as str]
             [org.httpkit.server :as http-kit]
             [openhab.api.sse :as sse]
             [openhab.api.view :as view]
             [openhab.commands :as commands]
             [openhab.query :as query]
-            [reitit.ring :as ring]))
+            [reitit.ring :as ring])
+  (:import [java.net URLDecoder]
+           [java.nio.charset StandardCharsets]))
 
 (def ^:private json-content-type "application/json; charset=utf-8")
 
@@ -37,6 +40,23 @@
 
 (defn- registry [ctx]
   (:registry ctx))
+
+(defn- decode-query-component [s]
+  (URLDecoder/decode s (.name StandardCharsets/UTF_8)))
+
+(defn- query-param [request param-name]
+  (some->> (:query-string request)
+           (#(str/split % #"&"))
+           (keep (fn [part]
+                   (let [[raw-name raw-value] (str/split part #"=" 2)]
+                     (when (= param-name (decode-query-component raw-name))
+                       (decode-query-component (or raw-value ""))))))
+           first))
+
+(defn- event-predicate [request]
+  (if-let [topic (query-param request "topic")]
+    #(= topic (:event/topic %))
+    (constantly true)))
 
 (defn- system-handler [ctx]
   (fn [_]
@@ -157,7 +177,9 @@
                                          false)
                      (reset! stop!*
                              (sse/start-event-stream! (:bus ctx)
-                                                      #(http-kit/send! ch % false)))))
+                                                      #(http-kit/send! ch % false)
+                                                      (event-predicate request)
+                                                      {}))))
         :on-close (fn [_ch _status]
                     (when-let [stop! @stop!*]
                       (stop!)))}))))

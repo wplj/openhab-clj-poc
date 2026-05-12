@@ -68,6 +68,28 @@
     (Thread/sleep 50)
     (is (= 1 (count @sent)))))
 
+(deftest event-stream-filters-events-before-formatting
+  (let [bus (events/make-bus 32)
+        sent (atom [])
+        seen-topics (atom [])
+        topic "openhab/items/FanSpeed/statechanged"
+        stop! (sse/start-event-stream! bus
+                                       (fn [frame]
+                                         (swap! sent conj frame)
+                                         true)
+                                       (fn [event]
+                                         (swap! seen-topics conj (:event/topic event))
+                                         (= topic (:event/topic event))))]
+    (events/publish! bus {:event/type :thing/added
+                          :thing-id "t1"})
+    (events/publish! bus {:event/type :item/state-changed
+                          :item-name "FanSpeed"
+                          :state 5})
+    (is (wait-until #(= 1 (count @sent))))
+    (is (= topic (:topic (parse-frame-data (first @sent)))))
+    (is (some #{"openhab/things/t1/added"} @seen-topics))
+    (stop!)))
+
 (deftest event-stream-stops-when-send-fails
   (let [bus (events/make-bus 32)
         send-count (atom 0)]

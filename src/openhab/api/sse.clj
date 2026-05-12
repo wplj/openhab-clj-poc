@@ -39,14 +39,19 @@
       false)))
 
 (defn start-event-stream!
-  "Subscribes to all events and sends SSE frames through send-frame!.
+  "Subscribes to all events and sends matching SSE frames through send-frame!.
 
    Returns a no-arg cleanup fn. send-frame! may return false to stop the stream.
-   Heartbeats are SSE comments and can be disabled by passing :heartbeat-ms nil."
+   event-pred receives the decorated event map before serialization. Heartbeats are
+   SSE comments and can be disabled by passing :heartbeat-ms nil."
   ([bus send-frame!] (start-event-stream! bus send-frame! {}))
-  ([bus send-frame! {:keys [buf-size heartbeat-ms]
-                     :or {buf-size 64
-                          heartbeat-ms default-heartbeat-ms}}]
+  ([bus send-frame! event-pred-or-opts]
+   (if (fn? event-pred-or-opts)
+     (start-event-stream! bus send-frame! event-pred-or-opts {})
+     (start-event-stream! bus send-frame! (constantly true) event-pred-or-opts)))
+  ([bus send-frame! event-pred {:keys [buf-size heartbeat-ms]
+                                :or {buf-size 64
+                                     heartbeat-ms default-heartbeat-ms}}]
    (let [event-ch (events/subscribe-all! bus buf-size)
          stop-ch (async/chan)
          stopped? (atom false)]
@@ -66,9 +71,11 @@
 
              (= port event-ch)
              (if (some? event)
-               (if (send-frame send-frame! (event-frame event))
-                 (recur)
-                 (stop!))
+               (if (event-pred event)
+                 (if (send-frame send-frame! (event-frame event))
+                   (recur)
+                   (stop!))
+                 (recur))
                (stop!))
 
              :else
